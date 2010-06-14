@@ -62,6 +62,7 @@ import qualified Paths_snap_server as V
 -- hidden inside the Snap monad
 type ServerHandler = (ByteString -> IO ())
                    -> Request
+                   -> ProcessingState
                    -> Iteratee IO (Request,Response)
 
 type ServerMonad = StateT ServerState (Iteratee IO)
@@ -316,13 +317,19 @@ httpSession writeEnd' ibuf onSendFile tickle handler = do
     liftIO tickle
 
     case mreq of
-      (Just req) -> do
+      (Just req) ->
+        do
+
+          let path         = rqPath req
+          let contextPath  = "/"
+          let params       = rqParams req
+          let pstate       = ProcessingState path contextPath params           
           liftIO $ debug $ "got request: " ++
                            Prelude.show (rqMethod req) ++
                            " " ++ SC.unpack (rqURI req) ++
                            " " ++ Prelude.show (rqVersion req)
           logerr <- gets _logError
-          (req',rspOrig) <- lift $ handler logerr req
+          (req',rspOrig) <- lift $ handler logerr req pstate
           let rspTmp = rspOrig { rspHttpVersion = rqVersion req }
           checkConnectionClose (rspHttpVersion rspTmp) (rspHeaders rspTmp)
 
@@ -467,9 +474,8 @@ receiveRequest = do
                              version
                              cookies
                              snapletPath
-                             pathInfo
-                             contextPath
                              uri
+                             path
                              queryString
                              params
 
@@ -493,15 +499,13 @@ receiveRequest = do
                                 (catMaybes . map parseCookie)
                                 (Map.lookup "cookie" hdrs)
 
-        contextPath     = "/"
-
         parseHost h = (a, Cvt.int (S.drop 1 b))
           where
             (a,b) = S.break (== (c2w ':')) h
 
         params          = parseUrlEncoded queryString
 
-        (pathInfo, queryString) = first dropLeadingSlash . second (S.drop 1) $
+        (path, queryString) = first dropLeadingSlash . second (S.drop 1) $
                                   S.break (== (c2w '?')) uri
 
 
