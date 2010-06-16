@@ -131,10 +131,10 @@ testHttpRequest1 =
                     $ rqURI req
 
         assertEqual "server port" 7777 $ rqServerPort req
-        assertEqual "context path" "/" $ rqContextPath req
-        assertEqual "pathinfo" "foo/bar.html" $ rqPathInfo req
+ --     assertEqual "context path" "/" $ rqContextPath req
+        assertEqual "path" "foo/bar.html" $ rqPath req
         assertEqual "query string" "param1=abc&param2=def%20+&param1=abc" $
-                    rqQueryString req
+                     rqQueryString req
         assertEqual "server name" "www.zabble.com" $ rqServerName req
         assertEqual "version" (1,1) $ rqVersion req
         assertEqual "param1" (Just ["abc","abc"]) $

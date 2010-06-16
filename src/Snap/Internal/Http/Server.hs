@@ -62,7 +62,6 @@ import qualified Paths_snap_server as V
 -- hidden inside the Snap monad
 type ServerHandler = (ByteString -> IO ())
                    -> Request
-                   -> ProcessingState
                    -> Iteratee IO (Request,Response)
 
 type ServerMonad = StateT ServerState (Iteratee IO)
@@ -320,16 +319,12 @@ httpSession writeEnd' ibuf onSendFile tickle handler = do
       (Just req) ->
         do
 
-          let path         = rqPath req
-          let contextPath  = "/"
-          let params       = rqParams req
-          let pstate       = ProcessingState path contextPath params           
           liftIO $ debug $ "got request: " ++
                            Prelude.show (rqMethod req) ++
                            " " ++ SC.unpack (rqURI req) ++
                            " " ++ Prelude.show (rqVersion req)
           logerr <- gets _logError
-          (req',rspOrig) <- lift $ handler logerr req pstate
+          (req',rspOrig) <- lift $ handler logerr req
           let rspTmp = rspOrig { rspHttpVersion = rqVersion req }
           checkConnectionClose (rspHttpVersion rspTmp) (rspHeaders rspTmp)
 
@@ -475,8 +470,8 @@ receiveRequest = do
                              cookies
                              snapletPath
                              uri
-                             path
                              queryString
+                             path
                              params
 
       where
